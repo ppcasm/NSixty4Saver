@@ -1,6 +1,8 @@
 PROG = NSixty4Save
 OBJS = main.o
 
+CFLAGS = -Wall -Werror
+
 all: $(PROG)
 
 $(PROG): $(OBJS)

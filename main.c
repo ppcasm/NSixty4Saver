@@ -46,6 +46,8 @@ int main(int argc, char *argv[])
     if(!fp) {printf("File <%s> does not exist\n", argv[1]); return 1;}
     
     uint8_t *savefile = (uint8_t *)ldfile(fp);
+    if (savefile == NULL)
+        return 1;
    
     if(!strcmp(argv[2], "-zelda:oot"))
     {
@@ -214,7 +216,7 @@ void * ldfile(FILE *fp)
      if(!savebuf)
      {
              printf("Could not allocate memory.\n");
-             return;
+             return NULL;
      }
      
      fread(savebuf, sizeof(char), filelen, fp);
