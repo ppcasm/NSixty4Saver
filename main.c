@@ -91,8 +91,7 @@ int main(int argc, char *argv[])
     
     if(!strcmp(argv[2], "-yoshistory"))
     {
-		//First byte to checksum starts at 0x800F97F8
-		//Code starts at 0x800699BC
+
 		printf("Yoshi's Story\n\n");
 	
 		unsigned int i = 0;
