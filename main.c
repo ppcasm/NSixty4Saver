@@ -1,9 +1,18 @@
 /*
-Save Game Tool by ppcasm 
+(Dr. Mario - 0x800E51b0)
+
+Save Game Tool - ppcasm (2014)
+
 Arguments/supported games:
- -zeldaoot - Zelda: Ocarina of time
- -mk64 - Mario Kart 64
- -drmario -Dr. Mario
+ -zelda:oot - Zelda: Ocarina of time
+ -wr64 - Wave Race 64
+ -yoshistory - Yoshi's Story
+
+This tool replaces the "checksum" value in savegame files. The idea
+behind the tool is that you can manually edit the save game file 
+(such as in a hex editor) and then run this tool over it to generate 
+the proper checksum value for the specified game so that it will load on N64. 
+
 */
 
 #include <stdio.h>
@@ -24,9 +33,9 @@ typedef unsigned char uint8_t;
 uint8_t byte_chksum(uint8_t *buffer, uint32_t start, uint32_t end);
 uint16_t halfword_chksum(uint8_t *buffer, uint32_t start, uint32_t end);
 uint32_t word_chksum(uint8_t *buffer, uint32_t start, uint32_t end);
-void write_word(FILE *fp, uint32_t offset, uint32_t *value);
-void write_half(FILE *fp, uint32_t offset, uint16_t *value);
-void write_byte(FILE *fp, uint32_t offset, uint8_t *value);
+void write_word(FILE *fp, uint32_t offset, uint32_t value);
+void write_half(FILE *fp, uint32_t offset, uint16_t value);
+void write_byte(FILE *fp, uint32_t offset, uint8_t value);
 void * ldfile(FILE *fp);
 
 int main(int argc, char *argv[])
@@ -80,10 +89,73 @@ int main(int argc, char *argv[])
          write_half(fp, 2 ,t3);
     }
     
-    if(!strcmp(argv[2], "-drmario"))
+    if(!strcmp(argv[2], "-yoshistory"))
     {
-          printf("Dr. Mario\n");
-          //0x800E51b0
+		//First byte to checksum starts at 0x800F97F8
+		//Code starts at 0x800699BC
+		printf("Yoshi's Story\n\n");
+	
+		unsigned int i = 0;
+
+		uint32_t v1 = savefile[0];
+		uint32_t t9 = savefile[1];
+		uint32_t t6 = 0;
+		uint32_t t7 = 0;
+		uint32_t t8 = 0;
+		uint32_t t3 = 0;
+		uint32_t t0 = 0;
+		uint32_t t4 = 0;
+		uint32_t t5 = 0;
+		uint32_t t1 = 0;
+		uint32_t t2 = 0;
+
+		v1 = v1<<1;
+		t7 = v1>>0x10;
+		t8 = t7&1;
+		t6 = v1&0xfffe;
+		v1 = t6|t8;
+		v1 = v1^t9;
+		v1 = v1<<1;
+		t1 = v1>>0x10;
+		t2 = t1&1;
+		t0 = v1&0xfffe;
+		v1 = t0|t2;
+		
+		for(i=2;i<0x3fa;i+=4)
+		{
+			t3 = savefile[i];
+			t6 = savefile[i+1];
+			t0 = savefile[i+2];
+			
+			v1 = v1^t3;
+			v1 = v1<<1;
+			t5 = v1>>0x10;
+			t7 = t5&1;
+			t4 = v1&0xfffe;
+			v1 = t4|t7;
+			v1 = v1^t6;
+			v1 = v1<<1;
+			t9 = v1>>0x10;
+			t1 = t9&1;
+			t8 = v1&0xfffe;
+			v1 = t8|t1;
+			v1 = v1^t0;
+			v1 = v1<<1;
+			t4 = savefile[i+3];
+			t3 = v1>>0x10;
+			t5 = t3&1;
+			t2 = v1&0xfffe;
+			v1 = t2|t5;		
+			v1 = v1^t4;
+			v1 = v1<<1;
+			t6 = v1>>0x10;
+			t9 = t6&1;
+			t7 = v1&0xfffe;
+			v1 = t7|t9;
+		
+		}
+
+			write_half(fp, 0x3fa, v1); 		      
     }
     
     free(savefile);
@@ -150,7 +222,7 @@ void * ldfile(FILE *fp)
      return savebuf;
 }
 
-void write_half(FILE *fp, uint32_t offset, uint16_t *value)
+void write_half(FILE *fp, uint32_t offset, uint16_t value)
 {
      fseek(fp, offset, SEEK_SET);
      uint16_t *valuez = (uint16_t *)&value;
@@ -159,7 +231,7 @@ void write_half(FILE *fp, uint32_t offset, uint16_t *value)
      fseek(fp, 0, SEEK_SET);
 }
      
-void write_word(FILE *fp, uint32_t offset, uint32_t *value)
+void write_word(FILE *fp, uint32_t offset, uint32_t value)
 {
      fseek(fp, offset, SEEK_SET);
      uint32_t *valuez = (uint32_t *)&value;
@@ -169,7 +241,7 @@ void write_word(FILE *fp, uint32_t offset, uint32_t *value)
      
 }
 
-void write_byte(FILE *fp, uint32_t offset, uint8_t *value)
+void write_byte(FILE *fp, uint32_t offset, uint8_t value)
 {
      fseek(fp, offset, SEEK_SET);
      uint8_t *valuez = (uint8_t *)&value;
