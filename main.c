@@ -1,17 +1,24 @@
 /*
-(Dr. Mario - 0x800E51b0)
-
 Save Game Tool - ppcasm (2014)
 
 Arguments/supported games:
  -zelda:oot - Zelda: Ocarina of time
  -wr64 - Wave Race 64
  -yoshistory - Yoshi's Story
+ -sf64 - StarFox 64
+ -eb64 - ExciteBike 64
 
 This tool replaces the "checksum" value in savegame files. The idea
 behind the tool is that you can manually edit the save game file 
 (such as in a hex editor) and then run this tool over it to generate 
 the proper checksum value for the specified game so that it will load on N64. 
+
+NOTE: For games that have backup saves embedded inside of them, this tool only
+supports the first half of the save (second half is usually backup.) The reason for this
+is so that in case something does go wrong, you won't lose your entire save. Games with a 
+backup save file embedded in them will usually first check key structures and/or checksum value  
+against the data, and if it doesn't match then it will default to the second half, which is
+usually the backup. 
 
 */
 
@@ -40,24 +47,29 @@ void * ldfile(FILE *fp);
 
 int main(int argc, char *argv[])
 {
-    if(argc!=3) {printf("Wrong Usage: %s <input filename> <game flag>\n", argv[0]); return 1;}
+   if(argc!=3) {printf("Wrong Usage: %s <input filename> <game flag/-list>\n", argv[0]); return 1;}
    
-    FILE *fp = fopen(argv[1], "rb+");
-    if(!fp) {printf("File <%s> does not exist\n", argv[1]); return 1;}
+   int argfl = 0;
+
+   FILE *fp = fopen(argv[1], "rb+");
+   if(!fp) {printf("File <%s> does not exist\n", argv[1]); return 1;}
     
-    uint8_t *savefile = (uint8_t *)ldfile(fp);
-    if (savefile == NULL)
-        return 1;
-   
-    if(!strcmp(argv[2], "-zelda:oot"))
+   uint8_t *savefile = (uint8_t *)ldfile(fp);
+   if (savefile == NULL)  return 1;
+
+   if(!strcmp(argv[2], "-zelda:oot"))
     {
+		 argfl = 1;
+
          printf("Zelda: Ocarina of time\n");
          uint16_t chksum = halfword_chksum(savefile, 0x20, 0x9a9);
-         write_half(fp, 0x1372, chksum);
+		 write_half(fp, 0x1372, chksum);
     }
     
-    if(!strcmp(argv[2], "-wr64"))
+   if(!strcmp(argv[2], "-wr64"))
     {
+		 argfl = 1;
+
          printf("Wave Race 64\n");
         
          uint32_t *waverace = (uint32_t *)savefile;
@@ -93,6 +105,7 @@ int main(int argc, char *argv[])
     
     if(!strcmp(argv[2], "-yoshistory"))
     {
+		argfl = 1;
 
 		printf("Yoshi's Story\n\n");
 	
@@ -159,6 +172,117 @@ int main(int argc, char *argv[])
 			write_half(fp, 0x3fa, v1); 		      
     }
     
+    if(!strcmp(argv[2], "-sf64"))
+    {
+		argfl = 1;
+
+    	printf("StarFox 64\n");
+	
+		uint32_t T0 = 0;
+		uint32_t T1 = 0;
+		uint32_t T2 = 0;
+		uint32_t T3 = 0;
+		uint32_t T4 = 0;
+		uint32_t T5 = 0;
+		uint32_t T6 = 0;
+		uint32_t T7 = 0;
+		uint32_t T8 = 0;
+		uint32_t T9 = 0;
+		uint32_t V0 = 0;
+		uint32_t V1 = 0;
+		
+		int i = 0;
+
+		T6 = savefile[i];
+		T3 = savefile[i];
+		
+		T9 = T6<<1;
+		T0 = T9>>8;
+		T1 = T0&1;
+		T2 = T9|T1;
+		T4 = T2^T3;
+		T6 = T4<<1;
+		T8 = T6>>8;
+		T0 = T8&1;
+		T7 = T6&0xfe;
+		V1 = T7|T0;	
+		T9 = V1&0xffff;
+		V1 = T9|0;
+		
+		for(i=2;i<0xfe;i+=4)
+		{
+	
+			T1 = savefile[i];
+			T0 = savefile[i+1];
+			T2 = V1^T1;
+			T5 = T2<<1;
+			T6 = T5>>8;
+			T8 = T6&1;
+			T7 = T5|T8;
+			T9 = T7^T0;
+			T3 = T9<<1;
+			T8 = savefile[i+2];
+			T4 = T3>>8;
+			T6 = T4&1;
+			T5 = T3|T6;
+			T7 = T5^T8;
+			T1 = T7<<1;
+			T6 = savefile[i+3];
+			T2 = T1>>8;
+			T4 = T2&1;
+			T3 = T1|T4;
+			T5 = T3^T6;
+			T7 = T5<<1;
+			T9 = T7>>8;
+			T2 = T9&1;
+			T0 = T7&0xfe;
+			V1 = T0|T2;
+			T1 = V1&0xffff;
+			V1 = T1|0;
+		}
+			T4 = T1&0xff;
+			T3 = T4|0x9500;
+			V0 = T3&0xffff;
+			
+			write_half(fp, 0xFE, V0); 
+	}
+
+ 	if(!strcmp(argv[2], "-eb64"))
+    {
+		argfl = 1;
+
+		printf("ExciteBike 64\n");
+
+		uint32_t *excitebike = (uint32_t *)savefile;
+
+		uint32_t sumz = 0;
+		unsigned int i = 0;
+		
+		excitebike[0]=0x5748FB3A;
+	    sumz = excitebike[0];
+		sumz += word_chksum(savefile, 0x2, 0x200-1);
+		sumz = sumz^0xFCB1121D;
+		write_word(fp, 4, sumz);
+	
+	}
+
+	if(!strcmp(argv[2], "-list"))
+    {
+		argfl = 1;
+
+		printf("HELP\n\n");
+		printf("Usage: %s <filename_of_save> <game_arg>\n", argv[0]);
+		printf("<game_arg>\n(supported games list):\n");
+		printf(" -zelda:oot - Zelda: Ocarina of time\n");
+		printf(" -wr64 - Wave Race 64\n");
+ 		printf(" -yoshistory - Yoshi's Story\n");
+ 		printf(" -sf64 - StarFox 64\n");
+ 		printf(" -eb64 - ExciteBike 64\n");
+
+	}
+
+    if(!argfl) printf("No such option: %s : Try -list to see a list of supported games.\n", argv[2]);
+	
     free(savefile);
     fclose(fp);
     return 0;
@@ -166,11 +290,11 @@ int main(int argc, char *argv[])
 
 uint32_t word_chksum(uint8_t *buffer, uint32_t start, uint32_t end)
 {
-    uint32_t *data = (uint32_t *)buffer+(start/sizeof(uint32_t));
+    uint32_t *data = (uint32_t *)buffer;
     uint32_t sum = 0;
     int i;
     
-    for( i = 0; i < end; i++ )
+    for( i = start; i < end; i++ )
      {
         sum += SWAP4(data[i]);
      }
@@ -194,11 +318,11 @@ uint16_t halfword_chksum(uint8_t *buffer, uint32_t start, uint32_t end )
 
 uint8_t byte_chksum(uint8_t *buffer, uint32_t start, uint32_t end)
 {
-     uint8_t *data = (uint8_t *)buffer+(start/sizeof(uint8_t));
+     uint8_t *data = (uint8_t *)buffer;
      uint8_t sum = 0;
      int i;
     
-     for( i = 0; i < end; i++ )
+     for( i = start; i < end; i++ )
      {
         sum += data[i];
      }
@@ -216,7 +340,7 @@ void * ldfile(FILE *fp)
      if(!savebuf)
      {
              printf("Could not allocate memory.\n");
-             return NULL;
+             return;
      }
      
      fread(savebuf, sizeof(char), filelen, fp);
