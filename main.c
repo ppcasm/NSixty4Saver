@@ -7,6 +7,7 @@ Arguments/supported games:
  -yoshistory - Yoshi's Story
  -sf64 - StarFox 64
  -eb64 - ExciteBike 64
+ -nbac2 - Kobe Bryant NBA Courtside 2
 
 This tool replaces the "checksum" value in savegame files. The idea
 behind the tool is that you can manually edit the save game file 
@@ -55,7 +56,7 @@ int main(int argc, char *argv[])
    if(!fp) {printf("File <%s> does not exist\n", argv[1]); return 1;}
     
    uint8_t *savefile = (uint8_t *)ldfile(fp);
-   if (savefile == NULL)  return 1;
+   if (savefile == NULL)  exit(1);
 
    if(!strcmp(argv[2], "-zelda:oot"))
     {
@@ -266,11 +267,33 @@ int main(int argc, char *argv[])
 	
 	}
 
+	if(!strcmp(argv[2], "-nbac2"))
+    {
+		argfl = 1;
+
+		printf("Kobe Bryant NBA Courtside 2\n");
+	  
+		uint32_t *nba2 = (uint32_t *)savefile;
+
+		unsigned long V0 = 0;
+		unsigned long V1 = 0xfffffbe8;
+	
+		unsigned int i = 0;
+		for(i=1;i<=106;i++)
+		{
+			V0 = SWAP4(nba2[i]);
+			V1 = V1+V0;
+
+		}
+
+		write_word(fp, 0, 0-V1);
+
+	}
+
 	if(!strcmp(argv[2], "-list"))
     {
 		argfl = 1;
 
-		printf("HELP\n\n");
 		printf("Usage: %s <filename_of_save> <game_arg>\n", argv[0]);
 		printf("<game_arg>\n(supported games list):\n");
 		printf(" -zelda:oot - Zelda: Ocarina of time\n");
@@ -278,6 +301,7 @@ int main(int argc, char *argv[])
  		printf(" -yoshistory - Yoshi's Story\n");
  		printf(" -sf64 - StarFox 64\n");
  		printf(" -eb64 - ExciteBike 64\n");
+		printf(" -nbac2 - NBA Courtside 2\n");
 
 	}
 
